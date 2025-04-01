@@ -23,6 +23,22 @@ class TeamService {
     async getAllTeams() {
         return await this.teamModel.find();
     }
+    // In TeamService.js
+async addSolvedQuestion(teamId, questionId) {
+    return await Team.findByIdAndUpdate(
+        teamId,
+        {
+            $addToSet: { solvedQuestions: questionId },
+            $inc: { score: question.score }, // Optional: if you want to add points
+            $set: { lastSolvedAt: new Date() }
+        },
+        { new: true }
+    );
+}
+
+async getQuestionsByIds(questionIds) {
+    return await Question.find({ _id: { $in: questionIds } });
+}
 }
 
 export default TeamService;

@@ -37,6 +37,34 @@ const teamSchema = new mongoose.Schema({
       default: 'pending',
     },
   }],
+  // New fields for CTF functionality
+  solvedQuestions: [{
+    question: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Question',
+    },
+    solvedAt: {
+      type: Date,
+      default: Date.now,
+    },
+    solvedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    pointsEarned: {
+      type: Number,
+      default: 0,
+    }
+  }],
+  score: {
+    type: Number,
+    default: 0,
+    min: 0,
+  },
+  lastSolvedAt: {
+    type: Date,
+  },
+  // Existing timestamp fields
   createdAt: {
     type: Date,
     default: Date.now,
@@ -45,7 +73,35 @@ const teamSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+}, {
+  toJSON: {
+    virtuals: true,
+    transform: function(doc, ret) {
+      delete ret.__v;
+      return ret;
+    }
+  },
+  toObject: {
+    virtuals: true
+  }
 });
+
+// Virtual for member count
+teamSchema.virtual('memberCount').get(function() {
+  return this.members.length + 1; // +1 for leader
+});
+
+// Update timestamp on save
+teamSchema.pre('save', function(next) {
+  this.updatedAt = Date.now();
+  next();
+});
+
+// Indexes for better performance
+teamSchema.index({ name: 1 });
+teamSchema.index({ code: 1 });
+teamSchema.index({ score: -1 }); // For leaderboard queries
+teamSchema.index({ 'solvedQuestions.question': 1 }); // For question tracking
 
 const Team = mongoose.model('Team', teamSchema);
 
