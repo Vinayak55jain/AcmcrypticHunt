@@ -1,3 +1,5 @@
+import { response } from "express";
+
 class QuestionController {
     constructor(questionService) {
       this.questionService = questionService;
@@ -42,9 +44,11 @@ class QuestionController {
             message: 'Question not found'
           });
         }
+        const questionData = question.toObject();
+        delete questionData.answer;
         res.status(200).json({
           success: true,
-          data: question
+          data: questionData
         });
       } catch (error) {
         res.status(500).json({
@@ -102,6 +106,7 @@ class QuestionController {
   
     async checkAnswer(req, res) {
       try {
+        // qusetion id
         const { id } = req.params;
         const { teamId, answer } = req.body;
     
@@ -124,7 +129,7 @@ class QuestionController {
         }
     
         // Check if already solved
-        if (team.solvedQuestions.includes(question._id)) {
+        if (team.solvedQuestions.includes(question.id)) {
           return res.status(409).json({
             success: false,
             message: "Question already solved by your team"

@@ -1,5 +1,5 @@
 import express from 'express';
-import QuestionController from '../controllers/questionController.js';
+import QuestionController from '../controllers/QuestionController.js';
 import QuestionService from '../services/questionService.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 import adminMiddleware from '../middleware/adminMiddleware.js';

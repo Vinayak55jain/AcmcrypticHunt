@@ -1,26 +1,44 @@
+import SequenceService from '../services/sequenceService';
 class TeamController {
     constructor(teamService, questionService) {
         this.teamService = teamService;
         this.questionService = questionService;
+        this.sequenceService = new SequenceService(questionService);
     }
 
     async createTeam(req, res) {
         try {
-            const teamData = req.body;
-            const newTeam = await this.teamService.createTeam(teamData);
-            res.status(201).json({
-                success: true,
-                data: newTeam
-            });
+          const teamData = req.body;
+          
+          // Generate unique sequence for this team
+          const [sequence] = await this.sequenceService.generateUniqueSequence(1);
+          
+          // Add to team data
+          const teamWithSequence = {
+            ...teamData,
+            questionSequence: sequence,
+            currentQuestionIndex: 0,
+            solvedQuestions: []
+          };
+    
+          const newTeam = await this.teamService.createTeam(teamWithSequence);
+          
+          // Return data without exposing sequence
+          const responseData = newTeam.toObject();
+          delete responseData.questionSequence;
+    
+          res.status(201).json({
+            success: true,
+            data: responseData
+          });
         } catch (error) {
-            res.status(500).json({ 
-                success: false,
-                message: 'Error creating team',
-                error: error.message 
-            });
+          res.status(500).json({ 
+            success: false,
+            message: 'Error creating team',
+            error: error.message 
+          });
         }
-    }
-
+      }
     async updateTeam(req, res) {
         try {
             const teamId = req.params.id;
@@ -85,6 +103,8 @@ class TeamController {
     }
 
     async getSolvedQuestions(req, res) {
+      
+        // what if two requests come at the same time to submit request and which answer will be considered
         try {
             const teamId = req.params.teamId;
             const team = await this.teamService.getTeamById(teamId);
@@ -139,6 +159,8 @@ class TeamController {
             });
         }
     }
+
+
 }
 
 export default TeamController;

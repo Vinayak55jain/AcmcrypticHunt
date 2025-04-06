@@ -21,6 +21,7 @@ class AuthController {
         message: error.message 
       });
     }
+    
   }
 
   async login(req, res) {

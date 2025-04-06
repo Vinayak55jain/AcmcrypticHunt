@@ -37,7 +37,24 @@ const teamSchema = new mongoose.Schema({
       default: 'pending',
     },
   }],
-  // New fields for CTF functionality
+  // Question sequence and tracking
+  questionSequence: {
+    type: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Question',
+    }],
+    validate: {
+      validator: function(arr) {
+        return arr.length === new Set(arr.map(id => id.toString())).size;
+      },
+      message: 'Question sequence must contain unique question IDs'
+    }
+  },
+  currentQuestionIndex: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
   solvedQuestions: [{
     question: {
       type: mongoose.Schema.Types.ObjectId,
@@ -64,6 +81,10 @@ const teamSchema = new mongoose.Schema({
   lastSolvedAt: {
     type: Date,
   },
+  // Tracking for sequence generation
+  sequenceGeneratedAt: {
+    type: Date
+  },
   // Existing timestamp fields
   createdAt: {
     type: Date,
@@ -78,11 +99,17 @@ const teamSchema = new mongoose.Schema({
     virtuals: true,
     transform: function(doc, ret) {
       delete ret.__v;
+      delete ret.questionSequence; // Don't expose sequence in responses
       return ret;
     }
   },
   toObject: {
-    virtuals: true
+    virtuals: true,
+    transform: function(doc, ret) {
+      delete ret.__v;
+      delete ret.questionSequence; // Don't expose sequence in responses
+      return ret;
+    }
   }
 });
 
@@ -91,9 +118,27 @@ teamSchema.virtual('memberCount').get(function() {
   return this.members.length + 1; // +1 for leader
 });
 
+// Virtual for current question
+teamSchema.virtual('currentQuestion').get(function() {
+  if (!this.questionSequence || this.questionSequence.length === 0) return null;
+  return this.questionSequence[this.currentQuestionIndex];
+});
+
+// Virtual for completion status
+teamSchema.virtual('isCompleted').get(function() {
+  if (!this.questionSequence) return false;
+  return this.currentQuestionIndex >= this.questionSequence.length;
+});
+
 // Update timestamp on save
 teamSchema.pre('save', function(next) {
   this.updatedAt = Date.now();
+  
+  // Set sequence generation timestamp if sequence is being set
+  if (this.isModified('questionSequence')) {
+    this.sequenceGeneratedAt = Date.now();
+  }
+  
   next();
 });
 
@@ -102,6 +147,7 @@ teamSchema.index({ name: 1 });
 teamSchema.index({ code: 1 });
 teamSchema.index({ score: -1 }); // For leaderboard queries
 teamSchema.index({ 'solvedQuestions.question': 1 }); // For question tracking
+teamSchema.index({ 'questionSequence': 1 }); // For sequence lookups
 
 const Team = mongoose.model('Team', teamSchema);
 
